@@ -7,11 +7,15 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -74,5 +78,25 @@ public class SecurityConfig {
                 .macAlgorithm(MacAlgorithm.HS384)
                 .build();
     }
+
+
+    @Component
+    public class AuthUser {
+        public Long currentUserId() {
+            var auth = (JwtAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+            var jwt = (Jwt) auth.getToken();
+
+            Object val = jwt.getClaims().getOrDefault("user_id", jwt.getClaims().get("sub"));
+            if (val == null) throw new IllegalArgumentException("JWT missing user id (user_id/sub)");
+
+            if (val instanceof Number n) return n.longValue();
+            try { return Long.parseLong(val.toString()); }
+            catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid user id in token: expected numeric but was '" + val + "'");
+            }
+        }
+    }
+
+
 
 }

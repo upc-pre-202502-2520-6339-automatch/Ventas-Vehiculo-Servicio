@@ -18,6 +18,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
+
 @RestController
 @RequestMapping("/api/v1/sales")
 public class SalesController {
@@ -32,14 +34,17 @@ public class SalesController {
 
     @Operation(summary="Create sale (reserve vehicle)")
     @ApiResponses({
-            @ApiResponse(responseCode="200", description="Sale created"),
-            @ApiResponse(responseCode="400", description="Invalid data or active sale exists")
+            @ApiResponse(responseCode="201", description="Sale created"),
+            @ApiResponse(responseCode="400", description="Invalid data"),
+            @ApiResponse(responseCode="409", description="Active sale exists or rule violated")
     })
+
     @PostMapping
     public ResponseEntity<SaleResource> create(@RequestBody @Valid CreateSaleResource body){
         var id = commandService.handle(CreateSaleCommandFromResourceAssembler.toCommandFromResource(body));
         var sale = queryService.handle(new GetSaleByIdQuery(id));
-        return ResponseEntity.ok(SaleResourceFromEntityAssembler.toResourceFromEntity(sale));
+        return ResponseEntity.created(URI.create("/api/v1/sales/" + id))
+                .body(SaleResourceFromEntityAssembler.toResourceFromEntity(sale));
     }
 
     @Operation(summary="Get sale by ID")
